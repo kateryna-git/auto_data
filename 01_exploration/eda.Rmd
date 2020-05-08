@@ -1,0 +1,179 @@
+---
+title: "EDA"
+author: "Kateryna Chenina"
+date: "06 05 2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(lubridate)
+library(janitor)
+library(dplyr)
+library(here)
+library(kableExtra)
+library(skimr)
+
+pacman::p_load(skimr, dlookr, formattable, kableExtra, GGally, visdat, plotly, lubridate, here, sparkline, visdat, tidygeocoder, tidyverse)
+source(here('00_scripts', 'functions', '04_make_data_summary.R'))
+options(scipen = 999)
+
+```
+
+```{r}
+file_list_t <- list.files(here('00_data', 'tidy'), pattern = "*\\.rds") %>% 
+  paste0(here('00_data', 'tidy'), "/", .)
+
+
+#return dataframe by row binding
+data <- map_df(file_list_t, read_rds) %>% 
+  
+  #add column -website
+  mutate(website = str_extract(link, "(autogidas.lt|autoplius.lt)")) %>% 
+  
+  mutate(body_type = str_to_lower(body_type)) %>% 
+  
+  #mutate -body_type
+  mutate(body_type = str_replace(body_type, "saloon\\s\\/\\ssedan", "sedan")) %>% 
+  
+  #add dupes column
+  janitor::get_dupes(advert_id) %>% 
+  
+  as_tibble()
+
+```
+
+```{r}
+
+top_levels(as.factor(data$city))
+
+
+data %>% 
+  tabyl(model, make) %>% 
+  adorn_totals("col", fill = "-") %>%
+  adorn_percentages("row") %>%
+  adorn_pct_formatting(digits = 2) %>%
+  adorn_ns() %>%
+  adorn_title() 
+
+
+data %>% 
+  tabyl(make, body_type)
+
+
+# cro(joined_main_n_ratios$group, 
+#     list(sum(joined_main_n_ratios$year_ceased_operations),
+#          total())
+#     )
+
+```
+
+
+```{r}
+skim_list <- partition(skim(data)) 
+
+main_summary(data, "cars") %>% 
+  main_style_one_table()
+
+skim_factor(skim_list)
+skim_numeric(skim_list)
+skim_date(skim_list)
+skim_posixct(skim_list)
+
+
+```
+
+
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r cars}
+# joined_main_n_ratios %>% 
+# ggpairs(columns = c(3,5), switch = "both", title="tips data") +
+#   v1_ggmatrix_theme()
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+# vis_dat(data)
+# vis_miss(data, cluster = TRUE)
+# 
+# 
+# record %>% 
+#   filter(Company == 'ABS') %>% 
+#   select(Year, Month, Client_Name, Embryo_Type) %>% 
+#   group_by(Month, Year, Embryo_Type) %>% 
+#    tab_cells(Embryo_Type) %>% 
+#   tab_cols(Year, Month) %>% 
+#   tab_stat_cpct() %>% 
+#   tab_pivot() %>% 
+#     set_caption("Ratio of vitrified v fresh embryo implants by month and year.")
+# 
+# record %>% 
+#   calculate(cro_cpct(Company, list(total(), Contract_Type, Transfer_Location))) %>% 
+#   htmlTable(caption = "Table with multiple banners (column %).")
+
+
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+
+
+```{r}
+# geo_plot_tbl() %>%
+#       
+#       plot_geo(locationmode = "country names") %>%
+#       
+#       add_trace(z = ~TOTALCOUNTRYSALES,
+#                 locations = ~COUNTRY,
+#                 color = ~TOTALCOUNTRYSALES,
+#                 text = ~label_text,
+#                 marker = list(line = list(
+#                   color = toRGB("black"), width = 0.8)), # Boundaries
+#                 colors = "YlGnBu",
+#                 hoverinfo = "text") %>%
+#       
+#       colorbar(title = 'Revenue',
+#                tickprefix = '$',
+#                x = 1, y = 0.8) %>% # Color Gradient
+#       
+#       layout(
+#         showlegend = FALSE,
+#         geo = list(  # Specify map options
+#           scope = "world",
+#           bgcolor = toRGB("white", alpha = 0),
+#           countrycolor = toRGB("gray"),
+#           showcountries = TRUE,
+#           showframe = FALSE,
+#           showcoastlines = FALSE,
+#           coastlinecolor = toRGB("#ECEFF1"),
+#           projection = list(type = 'Equirectangular')))
+# 
+# 
+# 
+#  processed_data_filtered_tbl() %>%
+#       
+#       group_by(COUNTRY) %>%
+#       summarise(TOTALCOUNTRYSALES = sum(SALES)) %>%
+#       ungroup() %>%
+#       mutate(label_text = str_glue("Country: {COUNTRY}
+#                                Revenue: {scales::dollar(TOTALCOUNTRYSALES)}"))
+
+```
+
+```{r}
+cascade_points <- data %>%
+  select(1:10) %>% 
+  group_by(advert_id) %>% 
+  summarise(across(everything()), distinct)
+  geocode(city,method='cascade')
+```
+
